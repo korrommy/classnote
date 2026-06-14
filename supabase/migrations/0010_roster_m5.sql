@@ -19,9 +19,14 @@
 -- ============================================================
 
 -- ---------- 1) ห้องเรียน ม.5/1 ----------
+-- ใช้ do update (ไม่ใช่ do nothing) เพื่อให้ re-run แก้ค่าเก่าที่เพี้ยนได้ด้วย
+-- (เคยมี run เก่าที่ตั้ง name='ม.5'/room='5' ค้างไว้ — do nothing จะไม่อัปเดตให้)
 insert into public.classrooms (id, name, grade_level, room)
 values ('c0000000-0000-4000-8000-000000000501', 'ม.5/1', 'ม.5', '5/1')
-on conflict (id) do nothing;
+on conflict (id) do update
+  set name = excluded.name,
+      grade_level = excluded.grade_level,
+      room = excluded.room;
 
 -- ---------- 2) รายชื่อนักเรียน (เลขที่ 1–35) ----------
 insert into public.student_roster (classroom_id, student_no, full_name)
