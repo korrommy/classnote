@@ -86,18 +86,18 @@ export function ProfileStudentCard({
       </div>
 
       <div
-        className="absolute left-[124px] right-[12px] top-[145px] flex h-[28px] items-center justify-between gap-[8px] px-[12px] font-serif font-normal leading-none"
+        className="absolute left-[124px] right-[12px] top-[145px] flex h-[28px] items-center justify-between gap-[6px] px-[10px] font-serif font-normal leading-none"
         style={{ backgroundColor: colors.bar, color: colors.barText }}
       >
-        <span className="flex min-w-0 items-baseline gap-[5px]">
-          <span className="flex-none text-[17px]">Grade</span>
-          <span className="truncate text-[15px]" title={gradeText}>
+        <span className="flex items-baseline gap-[4px]">
+          <span className="text-[15px]">Grade</span>
+          <span className="whitespace-nowrap text-[14px]" title={gradeText}>
             {gradeText}
           </span>
         </span>
-        <span className="flex flex-none items-baseline gap-[5px]">
-          <span className="text-[17px]">No.</span>
-          <span className="text-[15px]">{studentNoText}</span>
+        <span className="flex flex-none items-baseline gap-[4px]">
+          <span className="text-[15px]">No.</span>
+          <span className="whitespace-nowrap text-[14px]">{studentNoText}</span>
         </span>
       </div>
 

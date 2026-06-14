@@ -144,7 +144,7 @@ export default async function ProfilePage() {
         width={356}
         height={200}
         unoptimized
-        className="absolute left-1/2 top-[520px] h-auto w-[190px] -translate-x-1/2 object-contain"
+        className="absolute left-1/2 top-[486px] h-auto w-[190px] -translate-x-1/2 object-contain"
       />
     </main>
   );
