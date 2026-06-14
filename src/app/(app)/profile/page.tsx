@@ -69,7 +69,7 @@ export default async function ProfilePage() {
     : "classic";
 
   return (
-    <main className="relative h-full min-h-0 w-full overflow-hidden bg-cream px-[22px]">
+    <main className="relative h-full min-h-[660px] w-full overflow-hidden bg-cream px-[22px]">
       <section className="absolute left-[42px] right-[22px] top-[40px]">
         <h1 className="outlined-title whitespace-nowrap text-[62px] leading-none">
           <span className="outlined-title-pink">โปร</span>ไฟล์
