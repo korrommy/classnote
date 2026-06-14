@@ -1,26 +1,142 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ===== ClassNote Design System - Cute Classroom Neobrutalism ===== */
+@theme {
+  --color-cream: #fff9e9;
+  --color-mint: #d7efc3;
+  --color-soft-green: #c9e8ad;
+  --color-baby-blue: #cfe7f7;
+  --color-pastel-pink: #f8dce1;
+  --color-hot-pink: #f8a8c3;
+  --color-soft-yellow: #f8e68b;
+  --color-lavender: #d9c5f8;
+  --color-light-purple: #c6b0ef;
+  --color-aqua: #b9f1f4;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-outline: #080808;
+  --color-dark-text: #111111;
+  --color-soft-gray: #ede7dd;
+  --color-card: #fffdf4;
+  --color-paper: #ffffff;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-pink-accent: #ffb5c8;
+  --color-green-accent: #b7e99a;
+  --color-sky-accent: #77c3f4;
+  --color-yellow-accent: #ffe574;
+
+  --color-overdue: #ff8fa3;
+  --color-due-soon: #f6d66a;
+  --color-completed: #b9e39c;
+  --color-tag-blue: #d4ebf8;
+  --color-tag-purple: #d8c7f6;
+
+  --font-sans: var(--font-mitr), system-ui, sans-serif;
+
+  --shadow-brutal-sm: 3px 4px 0 #080808;
+  --shadow-brutal: 5px 7px 0 #080808;
+  --shadow-brutal-lg: 8px 10px 0 #080808;
+  --shadow-soft-drop: 0 8px 0 rgb(8 8 8 / 0.12), 0 12px 18px rgb(8 8 8 / 0.18);
+
+  --radius-brutal: 1.15rem;
+  --radius-big: 1.75rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-dark-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+.font-black,
+.font-bold,
+.font-semibold,
+.font-medium {
+  font-weight: 400 !important;
+}
+
+.outlined-title {
+  font-weight: 500 !important;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.outlined-title {
+  color: var(--color-soft-yellow);
+  text-shadow:
+    3px 0 var(--color-outline),
+    -3px 0 var(--color-outline),
+    0 3px var(--color-outline),
+    0 -3px var(--color-outline),
+    2px 2px var(--color-outline),
+    -2px 2px var(--color-outline),
+    2px -2px var(--color-outline),
+    -2px -2px var(--color-outline),
+    5px 6px 0 rgb(0 0 0 / 0.18);
+}
+
+.outlined-title-pink {
+  color: var(--color-pink-accent);
+}
+
+.outlined-title-blue {
+  color: var(--color-baby-blue);
+}
+
+.outlined-title-green {
+  color: var(--color-green-accent);
+}
+
+.flashcard-title {
+  font-weight: 500 !important;
+  letter-spacing: 0;
+  text-shadow:
+    3px 0 var(--color-outline),
+    -3px 0 var(--color-outline),
+    0 3px var(--color-outline),
+    0 -3px var(--color-outline),
+    2px 2px var(--color-outline),
+    -2px 2px var(--color-outline),
+    2px -2px var(--color-outline),
+    -2px -2px var(--color-outline);
+}
+
+.cartoon-panel {
+  border: 2.5px solid var(--color-outline);
+  border-radius: var(--radius-big);
+  box-shadow: var(--shadow-brutal);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .floaty {
+    animation: floaty 4s ease-in-out infinite;
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
