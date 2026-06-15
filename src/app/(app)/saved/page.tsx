@@ -4,6 +4,7 @@ import { relativeThai } from "@/lib/time";
 import type { PublicPost } from "@/components/public/PublicFeed";
 import { SavedFeed } from "@/components/saved/SavedFeed";
 import { loadNoteInteractions } from "@/lib/interactions/feed";
+import { resolveNoteCover } from "@/lib/notes/cover";
 
 export default async function SavedPage() {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export default async function SavedPage() {
   const { data: saves, error: savesError } = await supabase
     .from("saved_notes")
     .select(
-      "created_at, note:notes(id, title, created_at, author:profiles!notes_author_id_fkey(full_name, avatar_url), subject:subjects(name))",
+      "created_at, note:notes(id, title, created_at, author:profiles!notes_author_id_fkey(full_name, avatar_url), subject:subjects(name), files:note_files(file_url, file_type))",
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -33,6 +34,7 @@ export default async function SavedPage() {
     created_at: string;
     author: { full_name?: string | null; avatar_url?: string | null } | null;
     subject: { name?: string } | null;
+    files: unknown;
   };
 
   // โน้ตที่เข้าถึงไม่ได้แล้ว (เช่น เปลี่ยน visibility) RLS จะคืน null — กรองทิ้ง
@@ -52,17 +54,24 @@ export default async function SavedPage() {
     notes.map((note) => note.id),
   );
 
-  const posts: PublicPost[] = notes.map((note) => ({
-    id: note.id,
-    title: note.title,
-    subject: note.subject?.name ?? null,
-    authorName: note.author?.full_name ?? "ผู้ใช้",
-    authorAvatarUrl: note.author?.avatar_url ?? null,
-    timeAgo: relativeThai(note.created_at),
-    likeCount: likeCounts.get(note.id) ?? 0,
-    likedByMe: likedByMe.has(note.id),
-    savedByMe: true,
-  }));
+  const posts: PublicPost[] = await Promise.all(
+    notes.map(async (note) => {
+      const cover = await resolveNoteCover(note.files);
+      return {
+        id: note.id,
+        title: note.title,
+        subject: note.subject?.name ?? null,
+        authorName: note.author?.full_name ?? "ผู้ใช้",
+        authorAvatarUrl: note.author?.avatar_url ?? null,
+        timeAgo: relativeThai(note.created_at),
+        likeCount: likeCounts.get(note.id) ?? 0,
+        likedByMe: likedByMe.has(note.id),
+        savedByMe: true,
+        coverUrl: cover.coverUrl,
+        fileKind: cover.kind,
+      };
+    }),
+  );
 
   return (
     <main className="flex h-full min-h-0 w-full flex-col overflow-hidden px-[24px] pb-3 pt-[64px]">

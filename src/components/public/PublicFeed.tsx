@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { NoteActions } from "@/components/notes/NoteActions";
+import { NoteThumb } from "@/components/notes/NoteThumb";
+import type { NoteCoverKind } from "@/lib/notes/cover";
 
 export type PublicPost = {
   id: string;
@@ -15,6 +17,8 @@ export type PublicPost = {
   likeCount: number;
   likedByMe: boolean;
   savedByMe: boolean;
+  coverUrl: string | null;
+  fileKind: NoteCoverKind;
 };
 
 const SUBJECT_COLORS: Record<string, string> = {
@@ -83,7 +87,13 @@ export function PublicPostCard({ post }: { post: PublicPost }) {
     <article className="flex-none rounded-[1.25rem] border-[2.5px] border-outline bg-paper p-3 shadow-soft-drop">
       <Link href={`/notes/${post.id}`} className="block">
         <div className="flex gap-3">
-          <div className="aspect-square w-[76px] flex-none rounded-[0.8rem] border-2 border-outline bg-cream" />
+          <NoteThumb
+            size={96}
+            title={post.title}
+            coverUrl={post.coverUrl}
+            fileKind={post.fileKind}
+            subjectName={post.subject}
+          />
           <div className="min-w-0 flex-1">
             {post.subject && (
               <span

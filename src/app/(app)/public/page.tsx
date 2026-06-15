@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { relativeThai } from "@/lib/time";
 import { PublicFeed, type PublicPost } from "@/components/public/PublicFeed";
 import { loadNoteInteractions } from "@/lib/interactions/feed";
+import { resolveNoteCover } from "@/lib/notes/cover";
 
 export default async function PublicPage() {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export default async function PublicPage() {
   const { data: notes, error: notesError } = await supabase
     .from("notes")
     .select(
-      "id, title, created_at, author:profiles!notes_author_id_fkey(full_name, avatar_url), subject:subjects(name)",
+      "id, title, created_at, author:profiles!notes_author_id_fkey(full_name, avatar_url), subject:subjects(name), files:note_files(file_url, file_type)",
     )
     .in("visibility", ["public", "both"])
     .order("created_at", { ascending: false })
@@ -33,24 +34,29 @@ export default async function PublicPage() {
     (notes ?? []).map((note) => note.id),
   );
 
-  const posts: PublicPost[] = (notes ?? []).map((note) => {
-    const author = Array.isArray(note.author) ? note.author[0] : note.author;
-    const subject = Array.isArray(note.subject) ? note.subject[0] : note.subject;
+  const posts: PublicPost[] = await Promise.all(
+    (notes ?? []).map(async (note) => {
+      const author = Array.isArray(note.author) ? note.author[0] : note.author;
+      const subject = Array.isArray(note.subject) ? note.subject[0] : note.subject;
+      const cover = await resolveNoteCover(note.files);
 
-    return {
-      id: note.id,
-      title: note.title,
-      subject: (subject as { name?: string } | null)?.name ?? null,
-      authorName:
-        (author as { full_name?: string | null } | null)?.full_name ?? "ผู้ใช้",
-      authorAvatarUrl:
-        (author as { avatar_url?: string | null } | null)?.avatar_url ?? null,
-      timeAgo: relativeThai(note.created_at),
-      likeCount: likeCounts.get(note.id) ?? 0,
-      likedByMe: likedByMe.has(note.id),
-      savedByMe: savedByMe.has(note.id),
-    };
-  });
+      return {
+        id: note.id,
+        title: note.title,
+        subject: (subject as { name?: string } | null)?.name ?? null,
+        authorName:
+          (author as { full_name?: string | null } | null)?.full_name ?? "ผู้ใช้",
+        authorAvatarUrl:
+          (author as { avatar_url?: string | null } | null)?.avatar_url ?? null,
+        timeAgo: relativeThai(note.created_at),
+        likeCount: likeCounts.get(note.id) ?? 0,
+        likedByMe: likedByMe.has(note.id),
+        savedByMe: savedByMe.has(note.id),
+        coverUrl: cover.coverUrl,
+        fileKind: cover.kind,
+      };
+    }),
+  );
 
   return (
     <main className="flex h-full min-h-0 w-full flex-col overflow-hidden px-[18px] pb-3 pt-[31px]">
