@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { BookmarkPlus, Heart, MessageCircle } from "lucide-react";
 import { relativeThai } from "@/lib/time";
 import type { NoteCoverKind } from "@/lib/notes/cover";
+import { NoteActions } from "@/components/notes/NoteActions";
 
 export type NoteCardData = {
   id: string;
@@ -13,6 +13,9 @@ export type NoteCardData = {
   avatarUrl?: string | null;
   coverUrl?: string | null;
   fileKind?: NoteCoverKind;
+  isLiked: boolean;
+  isSaved: boolean;
+  likeCount: number;
 };
 
 const SUBJECT_COLORS = [
@@ -122,11 +125,12 @@ export function NoteCard({ note }: { note: NoteCardData }) {
           </p>
         </div>
       </div>
-      <div className="-mt-2 flex items-center justify-end gap-4 text-outline">
-        <Heart className="h-6 w-6 stroke-[2.4]" aria-hidden />
-        <MessageCircle className="h-6 w-6 stroke-[2.4]" aria-hidden />
-        <BookmarkPlus className="h-6 w-6 stroke-[2.4]" aria-hidden />
-      </div>
+      <NoteActions
+        noteId={note.id}
+        initialLiked={note.isLiked}
+        initialSaved={note.isSaved}
+        initialLikeCount={note.likeCount}
+      />
     </article>
   );
 }

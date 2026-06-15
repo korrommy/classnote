@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookmarkPlus, Heart, MessageCircle, Search } from "lucide-react";
-import { toggleLike, toggleSave } from "@/lib/interactions/actions";
+import { Search } from "lucide-react";
+import { NoteActions } from "@/components/notes/NoteActions";
 
 export type PublicPost = {
   id: string;
@@ -31,14 +31,6 @@ function subjectColor(name: string): string {
 
 export function PublicFeed({ posts }: { posts: PublicPost[] }) {
   const [query, setQuery] = useState("");
-  const [likedIds, setLikedIds] = useState<Set<string>>(
-    () => new Set(posts.filter((post) => post.likedByMe).map((post) => post.id)),
-  );
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
-    () => new Set(posts.filter((post) => post.savedByMe).map((post) => post.id)),
-  );
-  const [likeDelta, setLikeDelta] = useState<Record<string, number>>({});
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   const filtered = posts.filter(
     (post) =>
@@ -47,73 +39,6 @@ export function PublicFeed({ posts }: { posts: PublicPost[] }) {
       (post.subject ?? "").toLowerCase().includes(query.toLowerCase()) ||
       post.authorName.toLowerCase().includes(query.toLowerCase()),
   );
-
-  function setPending(id: string, pending: boolean) {
-    setPendingIds((prev) => {
-      const next = new Set(prev);
-      if (pending) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  async function handleLike(id: string) {
-    if (pendingIds.has(id)) return;
-    setPending(id, true);
-
-    const wasLiked = likedIds.has(id);
-    // optimistic update
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      if (wasLiked) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setLikeDelta((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + (wasLiked ? -1 : 1) }));
-
-    try {
-      const result = await toggleLike(id);
-      if (!result.ok) throw new Error(result.error);
-    } catch {
-      // revert on failure
-      setLikedIds((prev) => {
-        const next = new Set(prev);
-        if (wasLiked) next.add(id);
-        else next.delete(id);
-        return next;
-      });
-      setLikeDelta((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + (wasLiked ? 1 : -1) }));
-    } finally {
-      setPending(id, false);
-    }
-  }
-
-  async function handleBookmark(id: string) {
-    if (pendingIds.has(id)) return;
-    setPending(id, true);
-
-    const wasSaved = bookmarkedIds.has(id);
-    setBookmarkedIds((prev) => {
-      const next = new Set(prev);
-      if (wasSaved) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-    try {
-      const result = await toggleSave(id);
-      if (!result.ok) throw new Error(result.error);
-    } catch {
-      setBookmarkedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) next.add(id);
-        else next.delete(id);
-        return next;
-      });
-    } finally {
-      setPending(id, false);
-    }
-  }
 
   return (
     <>
@@ -132,17 +57,7 @@ export function PublicFeed({ posts }: { posts: PublicPost[] }) {
           {filtered.length === 0 ? (
             <EmptyPublicState hasQuery={Boolean(query.trim())} />
           ) : (
-            filtered.map((post) => (
-              <PublicPostCard
-                key={post.id}
-                post={post}
-                liked={likedIds.has(post.id)}
-                bookmarked={bookmarkedIds.has(post.id)}
-                likeCount={Math.max(0, post.likeCount + (likeDelta[post.id] ?? 0))}
-                onLike={() => handleLike(post.id)}
-                onBookmark={() => handleBookmark(post.id)}
-              />
-            ))
+            filtered.map((post) => <PublicPostCard key={post.id} post={post} />)
           )}
         </div>
       </section>
@@ -163,21 +78,7 @@ function EmptyPublicState({ hasQuery }: { hasQuery: boolean }) {
   );
 }
 
-export function PublicPostCard({
-  post,
-  liked,
-  bookmarked,
-  likeCount,
-  onLike,
-  onBookmark,
-}: {
-  post: PublicPost;
-  liked: boolean;
-  bookmarked: boolean;
-  likeCount: number;
-  onLike: () => void;
-  onBookmark: () => void;
-}) {
+export function PublicPostCard({ post }: { post: PublicPost }) {
   return (
     <article className="flex-none rounded-[1.25rem] border-[2.5px] border-outline bg-paper p-3 shadow-soft-drop">
       <Link href={`/notes/${post.id}`} className="block">
@@ -206,30 +107,12 @@ export function PublicPostCard({
           </div>
         </div>
       </Link>
-      <div className="-mt-2 flex items-center justify-end gap-4">
-        <button
-          type="button"
-          aria-label={liked ? "ยกเลิกถูกใจ" : "ถูกใจ"}
-          onClick={onLike}
-          className={`flex items-center gap-1 transition-transform active:scale-90 ${liked ? "text-hot-pink" : "text-outline"}`}
-        >
-          <Heart className="h-6 w-6 stroke-[2.4]" fill={liked ? "currentColor" : "none"} />
-          {likeCount > 0 && (
-            <span className="text-sm font-normal text-dark-text/80">{likeCount}</span>
-          )}
-        </button>
-        <Link href={`/notes/${post.id}`} aria-label="ความคิดเห็น" className="text-outline">
-          <MessageCircle className="h-6 w-6 stroke-[2.4]" />
-        </Link>
-        <button
-          type="button"
-          aria-label={bookmarked ? "ยกเลิกบันทึก" : "บันทึก"}
-          onClick={onBookmark}
-          className={`transition-transform active:scale-90 ${bookmarked ? "text-pink-accent" : "text-outline"}`}
-        >
-          <BookmarkPlus className="h-6 w-6 stroke-[2.4]" fill={bookmarked ? "currentColor" : "none"} />
-        </button>
-      </div>
+      <NoteActions
+        noteId={post.id}
+        initialLiked={post.likedByMe}
+        initialSaved={post.savedByMe}
+        initialLikeCount={post.likeCount}
+      />
     </article>
   );
 }

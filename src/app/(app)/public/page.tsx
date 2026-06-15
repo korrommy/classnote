@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { relativeThai } from "@/lib/time";
 import { PublicFeed, type PublicPost } from "@/components/public/PublicFeed";
+import { loadNoteInteractions } from "@/lib/interactions/feed";
 
 export default async function PublicPage() {
   const supabase = await createClient();
@@ -26,26 +27,11 @@ export default async function PublicPage() {
     console.error("[PublicPage] notes query failed:", notesError.message);
   }
 
-  const noteIds = (notes ?? []).map((note) => note.id);
-
-  const [likesRes, savesRes] = noteIds.length
-    ? await Promise.all([
-        supabase.from("note_likes").select("note_id, user_id").in("note_id", noteIds),
-        supabase
-          .from("saved_notes")
-          .select("note_id")
-          .eq("user_id", user.id)
-          .in("note_id", noteIds),
-      ])
-    : [{ data: [] }, { data: [] }];
-
-  const likeCounts = new Map<string, number>();
-  const likedByMe = new Set<string>();
-  for (const like of likesRes.data ?? []) {
-    likeCounts.set(like.note_id, (likeCounts.get(like.note_id) ?? 0) + 1);
-    if (like.user_id === user.id) likedByMe.add(like.note_id);
-  }
-  const savedByMe = new Set((savesRes.data ?? []).map((save) => save.note_id));
+  const { likeCounts, likedByMe, savedByMe } = await loadNoteInteractions(
+    supabase,
+    user.id,
+    (notes ?? []).map((note) => note.id),
+  );
 
   const posts: PublicPost[] = (notes ?? []).map((note) => {
     const author = Array.isArray(note.author) ? note.author[0] : note.author;

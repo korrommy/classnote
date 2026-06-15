@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { relativeThai } from "@/lib/time";
 import type { PublicPost } from "@/components/public/PublicFeed";
 import { SavedFeed } from "@/components/saved/SavedFeed";
+import { loadNoteInteractions } from "@/lib/interactions/feed";
 
 export default async function SavedPage() {
   const supabase = await createClient();
@@ -45,18 +46,11 @@ export default async function SavedPage() {
     })
     .filter((note): note is JoinedNote => note !== null);
 
-  const noteIds = notes.map((note) => note.id);
-
-  const { data: likes } = noteIds.length
-    ? await supabase.from("note_likes").select("note_id, user_id").in("note_id", noteIds)
-    : { data: [] };
-
-  const likeCounts = new Map<string, number>();
-  const likedByMe = new Set<string>();
-  for (const like of likes ?? []) {
-    likeCounts.set(like.note_id, (likeCounts.get(like.note_id) ?? 0) + 1);
-    if (like.user_id === user.id) likedByMe.add(like.note_id);
-  }
+  const { likeCounts, likedByMe } = await loadNoteInteractions(
+    supabase,
+    user.id,
+    notes.map((note) => note.id),
+  );
 
   const posts: PublicPost[] = notes.map((note) => ({
     id: note.id,

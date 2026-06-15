@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Mascot } from "@/components/ui/Mascot";
 import { NoteCard, type NoteCardData } from "@/components/notes/NoteCard";
 import { resolveNoteCover } from "@/lib/notes/cover";
+import { loadNoteInteractions } from "@/lib/interactions/feed";
 
 export default async function MyNotesPage() {
   const supabase = await createClient();
@@ -29,6 +30,12 @@ export default async function MyNotesPage() {
     console.error("[MyNotesPage] notes query failed:", notesError.message);
   }
 
+  const interactions = await loadNoteInteractions(
+    supabase,
+    user.id,
+    (notesData ?? []).map((note) => note.id),
+  );
+
   const notes: NoteCardData[] = await Promise.all(
     (notesData ?? []).map(async (note) => {
       const author = Array.isArray(note.author) ? note.author[0] : note.author;
@@ -46,6 +53,9 @@ export default async function MyNotesPage() {
           (author as { avatar_url?: string | null } | null)?.avatar_url ?? null,
         coverUrl: cover.coverUrl,
         fileKind: cover.kind,
+        isLiked: interactions.likedByMe.has(note.id),
+        isSaved: interactions.savedByMe.has(note.id),
+        likeCount: interactions.likeCounts.get(note.id) ?? 0,
       };
     }),
   );
