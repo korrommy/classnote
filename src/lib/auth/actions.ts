@@ -24,27 +24,46 @@ async function getOrigin(): Promise<string> {
 export type ActionState = {
   error?: string;
   message?: string;
+  // ตั้งเป็น true เมื่อ login ไม่ผ่านเพราะยังไม่ยืนยันอีเมล —
+  // ใช้บอกฟอร์มให้โชว์ปุ่ม "ส่งอีเมลยืนยันอีกครั้ง"
+  needsConfirm?: boolean;
+  // อีเมลที่กรอก (ส่งกลับไปให้ปุ่ม resend ใช้ต่อ) — เฉพาะกรณี needsConfirm
+  email?: string;
 };
 
 function translateAuthError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes("invalid login")) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
   // ต้องเช็ค "email not confirmed" ก่อนเงื่อนไข email ทั่วไป (ข้อความมีคำว่า email)
-  if (m.includes("not confirmed") || m.includes("confirm"))
+  if (m.includes("not confirmed") || m.includes("email not confirmed"))
     return "อีเมลนี้ยังไม่ได้ยืนยัน กรุณากดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ";
+  // rate limit ของบริการส่งเมล Supabase (default ~2 ฉบับ/ชม.) —
+  // ต้องเช็คก่อน catch-all "email" ไม่งั้นจะถูกแปลผิดเป็น "อีเมลไม่ถูกต้อง"
+  if (m.includes("rate limit") || m.includes("too many") || m.includes("exceeded"))
+    return "ระบบส่งอีเมลถึงโควตาชั่วคราว กรุณารอสักครู่แล้วลองใหม่อีกครั้ง";
   if (m.includes("already registered") || m.includes("already been registered"))
     return "อีเมลนี้ถูกใช้สมัครไปแล้ว";
+  if (m.includes("signups not allowed") || m.includes("not allowed for this"))
+    return "อีเมลนี้ยังสมัครไม่ได้ กรุณาติดต่อแอดมิน";
   if (m.includes("password"))
     return "รหัสผ่านไม่ปลอดภัยพอ (อย่างน้อย 6 ตัวอักษร)";
-  if (m.includes("email")) return "อีเมลไม่ถูกต้อง";
+  // เฉพาะกรณีที่ Supabase บอกชัดว่ารูปแบบอีเมลไม่ถูกต้องจริง ๆ
+  if (m.includes("invalid") && m.includes("email")) return "อีเมลไม่ถูกต้อง";
+  if (m.includes("email")) return "เกิดปัญหาเกี่ยวกับอีเมล กรุณาลองใหม่อีกครั้ง";
   return "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+}
+
+// ตัดช่องว่างและแปลงเป็นตัวพิมพ์เล็ก ก่อนส่งให้ Supabase เสมอ
+// กัน whitespace ที่มองไม่เห็น และกันบัญชีซ้ำจากตัวพิมพ์ใหญ่/เล็ก (Bob@ vs bob@)
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
 }
 
 export async function signIn(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
@@ -55,6 +74,11 @@ export async function signIn(
   try {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      const m = error.message.toLowerCase();
+      // login ล้มเพราะยังไม่ยืนยันอีเมล — ส่งสัญญาณให้ฟอร์มโชว์ปุ่ม resend
+      if (m.includes("not confirmed")) {
+        return { error: translateAuthError(error.message), needsConfirm: true, email };
+      }
       return { error: translateAuthError(error.message) };
     }
   } catch {
@@ -73,7 +97,7 @@ export async function signUp(
   formData: FormData,
 ): Promise<ActionState> {
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
   const classroomId = String(formData.get("classroom_id") ?? "").trim();
@@ -179,6 +203,43 @@ export async function signUp(
   }
 
   redirect("/loading");
+}
+
+// ส่งลิงก์ยืนยันสมัครสมาชิกใหม่ (กรณีอีเมลแรกไม่มา/หมดอายุ)
+// ใช้ resend ของ Supabase ด้วย anon key ฝั่ง server — ไม่แตะ admin API / service role
+export async function resendConfirmation(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  if (!email) {
+    return { error: "กรุณากรอกอีเมลก่อนขอส่งลิงก์ยืนยันใหม่" };
+  }
+
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  try {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${origin}/auth/callback?next=/loading`,
+      },
+    });
+    if (error) {
+      return { error: translateAuthError(error.message) };
+    }
+  } catch {
+    return {
+      error: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+    };
+  }
+
+  return {
+    message:
+      "ส่งลิงก์ยืนยันใหม่ไปที่อีเมลของคุณแล้ว กรุณาตรวจสอบกล่องจดหมาย (รวมถึงกล่องสแปม)",
+  };
 }
 
 export async function signOut(): Promise<void> {

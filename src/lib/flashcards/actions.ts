@@ -2,16 +2,17 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { M5_TERM1_UNITS } from "@/lib/flashcards/m5-term-1-data";
+import { M6_TERM1_UNITS } from "@/lib/flashcards/m6-term-1-data";
 import { M6_TERM2_UNITS } from "@/lib/flashcards/m6-term-2-data";
 
 export type FlashcardSaveResult = { ok: boolean };
 
 const MAX_ROUNDS = 9999;
 
-// ทุก unit ที่บันทึก progress ได้ (M.5 เทอม 1 + M.6 เทอม 2)
-// player ตัวเดียวกันถูกใช้ทั้งสองเด็ค จึงต้องรู้จัก deckId ของทั้งคู่
-// ไม่งั้น save ของ M.6 จะถูกปฏิเสธเงียบ ๆ (progress ไม่ถูกเก็บ)
-const ALL_UNITS = [...M5_TERM1_UNITS, ...M6_TERM2_UNITS];
+// ทุก unit ที่บันทึก progress ได้ (M.5 เทอม 1 + M.6 อ่านเขียน + M.6 เทอม 2)
+// player ตัวเดียวกันถูกใช้ทุกเด็ค จึงต้องรู้จัก deckId ของทั้งหมด
+// ไม่งั้น save ของเด็คที่ไม่รู้จักจะถูกปฏิเสธเงียบ ๆ (progress ไม่ถูกเก็บ)
+const ALL_UNITS = [...M5_TERM1_UNITS, ...M6_TERM1_UNITS, ...M6_TERM2_UNITS];
 
 export async function saveFlashcardProgress(
   deckId: string,
